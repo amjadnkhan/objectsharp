@@ -1,0 +1,316 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+    "ApplicationName": {
+      "type": "string",
+      "defaultValue": "enb",
+      "allowedValues": [
+        "enb",
+        "cnpl"
+      ]
+    },
+    "ApplicationShortName": {
+      "type": "string",
+      "defaultValue": "enb",
+      "allowedValues": [
+        "enb",
+        "cnpl"
+      ]
+    },
+    "EnvironmentName": {
+      "type": "string"
+    },
+    "EnvironmentShortName": {
+      "type": "string"
+    },
+    "OPSStorageSKU": {
+      "type": "string",
+      "defaultValue": "Standard_LRS",
+      "allowedValues": [
+        "Standard_LRS",
+        "Standard_GRS",
+        "Standard_ZRS",
+        "Standard_RAGRS"
+      ]
+    },
+    "Location": {
+      "type": "string",
+      "allowedValues": [
+        "Canada Central",
+        "US West 2"
+      ]
+    },
+    "VMSize": {
+          "type": "string",
+          "metadata": {
+             "description": "Virtual machine size"
+          }
+    },
+    "VMAdminUsername": {
+           "type": "string",
+           "metadata": {
+              "description": "Admin username"
+           }
+    },
+    "VMAdministratorLoginPassword": {
+           "type": "securestring",
+           "metadata": {
+               "description": "SSH Key or password for the Virtual Machine. SSH key is recommended."
+           }
+    },
+    "VirtualNetworkResourceGroup": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of the existing VNET resource group"
+      }
+    },
+    "VirtualNetworkName": {
+           "type": "string",
+           "metadata": {
+               "description": "Virtual network name"
+           }
+       },
+    "SubnetName": {
+      "type": "string",
+      "defaultValue": "snet-dev-web-cac",
+      "metadata": {
+        "description": "Name of the subnet in the virtual network you want to use"
+      }
+    },
+    "osType": {
+        "type": "string",
+        "defaultValue": "Windows",
+        "allowedValues": [
+            "Linux",
+            "Windows",
+            "Ubuntu",
+            "Redhat OS"
+        ],
+        "metadata": {
+            "description": "Operating System Type"
+        }
+    },
+    "ServerType": {
+        "type": "string",
+        "allowedValues": [
+            "SQL",
+            "APP",
+            "EXC",
+            "DC"
+        ]
+      },
+    "BusinessUnit": {
+        "type": "string",
+        "allowedValues": [
+          "E",
+          "TBD"
+        ]
+      },
+    "SITE": {
+        "type": "string",
+        "allowedValues": [
+          "A",
+          "TBD"
+        ],
+        "metadata": {
+            "description": "Site where A = Azure | TBD "
+        }
+      }
+   },
+   "variables": {
+    "locationShortCodeLookup": {
+      "Canada Central": "cac",
+      "US West 2": "usw2"
+    },
+    "storageShortCodeLookup": {
+      "Standard_LRS": "l",
+      "Standard_GRS": "g",
+      "Standard_ZRS": "z",
+      "Standard_RAGRS": "rg"
+    },
+    "osTypeShortCodeLookup": {
+      "Linux": "L",
+      "Windows": "W",
+      "Ubuntu": "U",
+      "Redhat OS": "R"
+    },
+    "locationShortCode": "[variables('locationShortCodeLookup')[parameters('Location')]]",
+
+    "osTypeShortCode": "[variables('osTypeShortCodeLookup')[parameters('osType')]]",
+
+
+    "VMName": "[concat(parameters('ApplicationName'), parameters('EnvironmentShortName'), parameters('BusinessUnit'), parameters('SITE') ,variables('osTypeShortCode'), parameters('ServerType'))]",
+
+    "nicName": "[concat('NIC-', variables('VMName'))]",
+
+    "VirtualNetworkName": "[resourceId(parameters('VirtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('VirtualNetworkName'))]",
+
+    "publicIpAddressName": "[concat('PIP-', variables('VMName'))]",
+    
+    "subnetRef": "[resourceId(parameters('VirtualNetworkResourceGroup'), 'Microsoft.Network/virtualNetworks/subnets', parameters('VirtualNetworkName'),  parameters('SubnetName'))]",
+    
+    "networkSecurityGroupName": "nsg-rdpallow-cac-01",
+
+    "OPSStorageAccountTypeCode": "[variables('storageShortCodeLookup')[parameters('OPSStorageSKU')]]",
+    
+    "OPSStorageAccountName": "[tolower(concat('sto', variables('OPSStorageAccountTypeCode'), 's', parameters('ApplicationShortName'), variables('locationShortCode'), parameters('EnvironmentShortName')))]"
+
+   },
+
+   "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "sku": {
+        "name": "[parameters('OPSStorageSKU')]",
+        "tier": "Standard"
+      },
+      "kind": "StorageV2",
+      "name": "[variables('OPSStorageAccountName')]",
+      "apiVersion": "2017-10-01",
+      "location": "[parameters('location')]",
+      "tags": "[resourceGroup().tags]",
+      "scale": null,
+      "properties": {
+        "supportsHttpsTrafficOnly": true,
+        "encryption": {
+          "services": {
+            "file": {
+              "enabled": true
+            },
+            "blob": {
+              "enabled": true
+            }
+          },
+          "keySource": "Microsoft.Storage"
+        }
+      },
+      "dependsOn": [
+      ]
+    },
+{
+            "name": "[variables('VMName')]",
+            "type": "Microsoft.Compute/virtualMachines",
+            "apiVersion": "2018-06-01",
+            "location": "[resourceGroup().location]",
+            "tags": "[resourceGroup().tags]",
+            "dependsOn": [
+                "[concat('Microsoft.Network/networkInterfaces/', variables('nicName'))]",
+                "[concat('Microsoft.Storage/storageAccounts/', variables('OPSStorageAccountName'))]"
+            ],
+            "properties": {
+                "osProfile": {
+                    "computerName": "[variables('VMName')]",
+                    "adminUsername": "[parameters('VMAdminUsername')]",
+                    "adminPassword": "[parameters('VMAdministratorLoginPassword')]",
+                    "windowsConfiguration": {
+                        "provisionVmAgent": "true"
+                    }
+                },
+                "hardwareProfile": {
+                    "vmSize": "[parameters('VMSize')]"
+                },
+                "storageProfile": {
+                    "imageReference": {
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter",
+                        "version": "latest"
+                    },
+                    "osDisk": {
+                        "name": "[concat(variables('VMName'),'_myOSDisk')]",
+                        "createOption": "FromImage",
+                        "managedDisk": {
+                            "storageAccountType": "Standard_LRS"
+                        }
+                    },
+                    "dataDisks": []
+                },
+                "networkProfile": {
+                    "networkInterfaces": [
+                        {
+                            "properties": {
+                                "primary": true
+                            },
+                            "id": "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('nicName')))]"
+                        }
+                    ]
+                },
+                "diagnosticsProfile": {
+                    "bootDiagnostics": {
+                            "enabled": true,
+                            "storageUri": "[concat('http://',variables('OPSStorageAccountName'),'.blob.core.windows.net')]"
+                    }
+                }
+            }
+      },
+      {
+            "name": "[variables('nicName')]",
+            "type": "Microsoft.Network/networkInterfaces",
+            "apiVersion": "2018-08-01",
+            "location": "[resourceGroup().location]",
+            "tags": "[resourceGroup().tags]",
+            "comments": "Primary NIC",
+            "dependsOn": [
+                "[variables('publicIpAddressName')]"
+            ],
+            "properties": {
+                "ipConfigurations": [
+                    {
+                        "name": "ipconfig1",
+                        "properties": {
+                            "subnet": {
+                                "id": "[variables('subnetRef')]"
+                            },
+                            "privateIPAllocationMethod": "Dynamic",
+                            "publicIpAddress": {
+                                "id": "[resourceId('Microsoft.Network/publicIpAddresses', variables('publicIpAddressName'))]"
+                            }
+                        }
+                    }
+                ],
+                "networkSecurityGroup": {
+                    "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+                }
+            }
+      },
+      {
+            "name": "[variables('publicIpAddressName')]",
+            "type": "Microsoft.Network/publicIpAddresses",
+            "apiVersion": "2018-08-01",
+            "location": "[resourceGroup().location]",
+            "tags": "[resourceGroup().tags]",
+            "comments": "Public IP for Primary NIC",
+            "properties": {
+                "publicIpAllocationMethod": "Dynamic"
+            }
+      },
+      {
+            "name": "[variables('networkSecurityGroupName')]",
+            "type": "Microsoft.Network/networkSecurityGroups",
+            "apiVersion": "2018-08-01",
+            "location": "[resourceGroup().location]",
+            "tags": "[resourceGroup().tags]",
+            "comments": "Network Security Group (NSG) for Primary NIC",
+            "properties": {
+                "securityRules": [
+                     {
+                        "name": "AllowInboundRdp",
+                        "properties": {
+                            "priority": 1000,
+                            "sourceAddressPrefix": "*",
+                            "protocol": "Tcp",
+                            "destinationPortRange": "3389",
+                            "access": "Allow",
+                            "direction": "Inbound",
+                            "sourcePortRange": "*",
+                            "destinationAddressPrefix": "*"
+                       }
+                   }
+               ]
+          }
+      }
+   ],
+   "outputs": {
+   }
+}

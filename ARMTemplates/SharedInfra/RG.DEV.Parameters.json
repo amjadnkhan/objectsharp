@@ -1,0 +1,22 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "rgName": {
+            "value": "ak-rg-enbops-dev-cac"
+        },
+        "rgLocation": {
+            "value": "canadacentral"
+        },
+        "tags": {
+            "value": {
+                "Environment Type": "DEV",
+                "Application Owner": "CloudCOE@enbridge.com",
+                "Application Name": "Infrastructure",
+                "APPID": "APPID0010653",
+                "Billing Code": "10015",
+                "Business Function": "SharedService"
+            }
+        }
+    }
+}

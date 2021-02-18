@@ -1,0 +1,42 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "EnvironmentName": {
+      "value": "D"
+    },
+    "EnvironmentShortName": {
+      "value": "d"
+    },
+    "Location": {
+      "value": "Canada Central"
+    },
+    "InsightsRegion": {
+      "value": "Canada Central"
+    },
+    "VMSize": {
+        "value": "Standard_D2s_v3"
+    },
+    "VMAdminUsername": {
+        "value": "enbadmin"
+    },
+    "osType": {
+      "value": "L"
+    },
+    "UbuntuOSVersion": {
+      "value": "18_04-lts-gen2"
+    },
+    "ServerType": {
+      "value": "APP"
+    },
+    "VirtualNetworkResourceGroup": {
+      "value": "ak-rg-network-dev-cac"
+    },
+    "VirtualNetworkName": {
+        "value": "vnet-dev-cac"
+    },
+    "SubnetName": {
+      "value": "snet-dev-web-cac"
+    }
+  }
+}
